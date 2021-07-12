@@ -7,7 +7,9 @@ library(GWmodel)
 
 #ordinary kriging
 ordinaryKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+  #check and remove anisotropy
   data_variogram <- handleAnisotropy(data, formula)
+  #do the kriging with the generated variogram
   interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
   return(interpolated_data$krige_output$var1.pred)
 }
@@ -15,20 +17,29 @@ ordinaryKriging <- function(data = "SpatialPointsDataFrame", newdata = c("Spatia
 
 
 universalKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+  #select the best detrended formula
   new_formula <- detrendFormula(data, formula)
+  #performs Universal Kriging with the selected formula
   interpolated_data <- autoKrige(new_formula, data, newdata)
   return(interpolated_data$krige_output$var1.pred)
 }
 
 
+
+#automatically do Universal Kriging if a trend is detected, otherwise performs ordinary kriging
 autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+  #check trend
   if(checkTrend(data, formula)){
+    #finds the best formula
     formula <- detrendFormula(data, formula)
+    #generate a variogram
     data_variogram <- autofitVariogram(formula, data)
   }
   else{
+    #if there is no trend, check and remove anisotropy
     data_variogram <- handleAnisotropy(data, formula)
   }
+  #perform kriging
   interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
 }
 
@@ -36,21 +47,36 @@ autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoi
 
 #arrumar
 #gstat
+
+#Cokriging function, it is necessary to inform the covariate data
+#if the covariate data is in the primary dataset, put the same dataset in the covariate_data e.g. data = dataset, covariate_data = dataset
 coKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", covariate_data = "SpatialPointsDataFrame"){
+  #separate the primary variable from the auxiliary variables
   left_var <- formulaToVector(formula = formula, side = "left")
   right_cov <- formulaToVector(formula = formula, side = "right")
   gstat_object <- NULL
+  #makes a formula with the primary variable
   this_formula <- makeFormula(left_var)
+  #generate a gstat object with the primary variable
   gstat_object <- gstat(gstat_object, id=left_var, formula=this_formula, data=data, nmax = 10)
+  #generate others gstat objects inside the same one above using the auxiliary variables
   for(variable in right_cov){
+    #makes a formula for each variable that is in the right side of the formula
     this_formula <- makeFormula(variable)
     gstat_object <- gstat(gstat_object, id=variable, formula=this_formula, data=covariate_data, nmax = 10)
   }
+  #makes a variogram of the gstat object
   variogram_model <- variogram(gstat_object)#, cutoff=1000)
+  #makes a vgm model
   model <- vgmModel(data = data, formula = makeFormula(left_var))
+  #insert the model in the gstat object
   gstat_object <- gstat(gstat_object, fill.all=T, model=model)
+  #fit the variogram in the gstat object
   gstat_object.fit <- fit.lmc(v = variogram_model,g = gstat_object)
   plot(variogram_model, model = gstat_object.fit)
+  
+  #try to interpolate, if the cross-variogram is bad, the predict function will throw an error
+  #if successful, return the interpolated data
   interpolated_data <- tryCatch(
                         {
                           interpolated_data <- predict(gstat_object.fit, newdata = newdata)
@@ -66,8 +92,20 @@ coKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoint
 }
 
 
+#fit a variogram automatically
 vgmModel <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   return(autofitVariogram(formula = formula, input_data = data)$var_model)
+}
+
+
+
+#newdata em fit.gstatModel pode ser diferente do newdata em predict.gstatModel    #newdata em fit.gstatmodel recebe dataframe de covariaveis
+
+#Regression Kriging
+regressionKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", covariate_data = "SpatialPointsDataFrame"){
+  fitted_data <- fit.gstatModel(data, formula, covariate_data, fit.family = gaussian())    #Must use covariates in SpatialPixelsDataFrame type
+  interpolated_data <- predict.gstatModel(fitted_data, newdata)
+  return(interpolated_data@predicted$var1.pred)
 }
 
 
@@ -130,15 +168,6 @@ mgwrKriging <- function(){
   
 }
 
-
-#newdata em fit.gstatModel pode ser diferente do newdata em predict.gstatModel    #newdata em fit.gstatmodel recebe dataframe de covariaveis
-
-#Regression Kriging
-regressionKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", covariate_data = "SpatialPointsDataFrame"){
-  fitted_data <- fit.gstatModel(data, formula, covariate_data, fit.family = gaussian())    #Must use covariates in SpatialPixelsDataFrame type
-  interpolated_data <- predict.gstatModel(fitted_data, newdata)
-  return(interpolated_data@predicted$var1.pred)
-}
 
 
 
