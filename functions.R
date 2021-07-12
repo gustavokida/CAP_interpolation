@@ -32,6 +32,7 @@ library(lme4)   #lmer
 
 
 
+#Transform SpatialPolygons to SpatialPixels
 makeGrid <- function(contour = "SpatialPolygons", cellsize = "numeric"){
   grid <- spsample(contour, n = 0, cellsize = cellsize, "regular")
   d1 <- data.frame(grid@coords[,1])
