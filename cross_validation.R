@@ -32,6 +32,8 @@ rmse <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInter
   return(sqrt(mean((data@data[, column_name] - all_points_predicted)^2)))
 }
 
+
+
 rmse <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInterpolation = "function", covariate_data = NULL){
   column_name <- formulaToVector(formula, "left")
   right_side <- formulaToVector(formula, "right")

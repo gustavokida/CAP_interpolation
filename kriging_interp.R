@@ -74,7 +74,7 @@ coKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoint
   #fit the variogram in the gstat object
   gstat_object.fit <- fit.lmc(v = variogram_model,g = gstat_object)
   plot(variogram_model, model = gstat_object.fit)
-  
+  gstat_object_cv <- gstat.cv(gstat_object.fit)
   #try to interpolate, if the cross-variogram is bad, the predict function will throw an error
   #if successful, return the interpolated data
   interpolated_data <- tryCatch(
@@ -88,7 +88,8 @@ coKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoint
   if(is.null(interpolated_data)){
     return(NULL)
   }
-  return(interpolated_data@data[,1])
+  #return(interpolated_data@data[,1])
+  return(c(gstat_object_cv, interpolated_data))
 }
 
 
@@ -116,7 +117,7 @@ krigingED <- function(){
 }
 
 
-
+#work in progress
 gwr <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
   bw <- bw.gwr(formula, data = data, kernel = "bisquare", adaptive = TRUE)
   colin <- gwr.collin.diagno(formula, data = data, bw = bw, kernel = "bisquare", adaptive = TRUE)

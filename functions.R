@@ -5,6 +5,7 @@ teste123 <- dados[,variavel_1]
 atributo_test <- dados %>% extract2(variavel_1)
 zscore2 <- dados$MG[abs((dados$MG-mean(dados$MG))/sd(dados$MG)) <= 2]
 
+library(methods)
 library(dplyr)    #na_if
 library(magrittr)   #pipeline
 library(spatialEco)   #removeNA
@@ -29,6 +30,7 @@ library(spatial)
 library(nlme)   #gls
 library(rms)    #gls
 library(lme4)   #lmer
+
 
 
 
@@ -133,15 +135,15 @@ backTransformation <- function(interpolated_data = "SpatialPointsDataFrame", bac
 
 
 #Apply BoxCox Transformation using method loglik
-boxCoxTransformation <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = NULL){
+boxCoxTransformation <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = "logical"){
   # lm_model <- lm(formula, data)
   # bc <- boxcox(lm_model)
   # best_lam <- bc$x[which(bc$y==max(bc$y))]
   bc <- NULL
   left_var <- formulaToVector(formula, "left")
-  if (is.null(lambda)){
+  if (isFALSE(reverseBoxCox)){
     #Calculate the lambda
-    lambda <- BoxCox.lambda(data@data[, left_var], method = 'loglik')
+    #lambda <- BoxCox.lambda(data@data[, left_var], method = 'loglik')
     #Apply BoxCox with the lambda value
     bc <- BoxCox(data@data[, left_var], lambda)
   }
