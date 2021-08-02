@@ -1,7 +1,7 @@
 
 library(gstat)    #idw, nn
-#validação cruzada C - IDW
-library(spm) #validação cruzada - IDW
+#valida??o cruzada C - IDW
+library(spm) #valida??o cruzada - IDW
 library(fields)   #tps
 library(car)    #predict for tps
 library(interp)   #TIN
@@ -9,9 +9,9 @@ library(raster)
 
 
 #colocar tratamento anisotropia
-#procurar por funçao que busca automaticamente o melhor idp
+#procurar por fun?ao que busca automaticamente o melhor idp
 #IDW
-inverseDistanceWeighted <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+inverseDistanceWeighted.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
   invisible(capture.output(result <- idw(formula, data, data@coords, newdata = newdata, idp = 2.0)$var1.pred))
   return(result)
 }
@@ -19,20 +19,20 @@ inverseDistanceWeighted <- function(data = "SpatialPointsDataFrame", newdata = c
 
 
 #verificar o nmax
-nearestNeighbor <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+nearestNeighbor.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
   result <- idw(formula, data, data@coords, newdata = newdata, idp = 0, nmax=1)$var1.pred
   return(result)
 }
 
 
 
-naturalNeighbor <- function(){
+naturalNeighbor.default <- function(){
   
 }
 
 
 #arrumar
-triangulation <- function(data = "SpatialPointsDataFrame",  newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+triangulation.default <- function(data = "SpatialPointsDataFrame",  newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
   newdata <- spPixelsToRaster(newdata)
   column_name <- formulaToVector(formula, "left")
   fit <- interp( # using {interp}
@@ -49,7 +49,7 @@ triangulation <- function(data = "SpatialPointsDataFrame",  newdata = c("Spatial
 
 
 
-spline <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+spline.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
   newdata <- spPixelsToRaster(newdata)
   column_name <- formulaToVector(formula, "left")
   fit <- Tps(data@coords, data@data[, column_name], miles = FALSE, lon.lat = TRUE)

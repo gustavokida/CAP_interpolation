@@ -6,17 +6,26 @@ library(GWmodel)
 
 
 #ordinary kriging
-ordinaryKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
-  #check and remove anisotropy
-  data_variogram <- handleAnisotropy(data, formula)
-  #do the kriging with the generated variogram
-  interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
-  return(interpolated_data$krige_output$var1.pred)
+ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL){
+  if(is.null(rmse_data)){
+    #check and remove anisotropy
+    data_variogram <- handleAnisotropy(data, formula)
+    #do the kriging with the generated variogram
+    interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+    return(interpolated_data$krige_output$var1.pred)
+  }
+  else{
+    #check and remove anisotropy
+    data_variogram <- handleAnisotropy(rmse_data, formula)
+    #do the kriging with the generated variogram
+    interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+    return(interpolated_data$krige_output$var1.pred)
+  }
 }
 
 
 
-universalKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL){
   #select the best detrended formula
   new_formula <- detrendFormula(data, formula)
   #performs Universal Kriging with the selected formula
@@ -50,7 +59,8 @@ autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoi
 
 #Cokriging function, it is necessary to inform the covariate data
 #if the covariate data is in the primary dataset, put the same dataset in the covariate_data e.g. data = dataset, covariate_data = dataset
-coKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", covariate_data = "SpatialPointsDataFrame"){
+coKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                              formula = "formula", covariate_data = "SpatialPointsDataFrame", rmse_data = NULL){
   #separate the primary variable from the auxiliary variables
   left_var <- formulaToVector(formula = formula, side = "left")
   right_cov <- formulaToVector(formula = formula, side = "right")
@@ -103,7 +113,8 @@ vgmModel <- function(data = "SpatialPointsDataFrame", formula = "formula"){
 #newdata em fit.gstatModel pode ser diferente do newdata em predict.gstatModel    #newdata em fit.gstatmodel recebe dataframe de covariaveis
 
 #Regression Kriging
-regressionKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", covariate_data = "SpatialPointsDataFrame"){
+regressionKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                                      formula = "formula", covariate_data = "SpatialPointsDataFrame", rmse_data = NULL){
   fitted_data <- fit.gstatModel(data, formula, covariate_data, fit.family = gaussian())    #Must use covariates in SpatialPixelsDataFrame type
   interpolated_data <- predict.gstatModel(fitted_data, newdata)
   return(interpolated_data@predicted$var1.pred)

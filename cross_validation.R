@@ -34,7 +34,7 @@ rmse <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInter
 
 
 
-rmse <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInterpolation = "function", covariate_data = NULL){
+rmse.default <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInterpolation = "function", covariate_data = NULL){
   column_name <- formulaToVector(formula, "left")
   right_side <- formulaToVector(formula, "right")
   all_points_predicted <- NULL

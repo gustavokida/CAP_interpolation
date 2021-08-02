@@ -65,7 +65,7 @@ spPixelsToRaster <- function(data = c("SpatialPointsDataFrame", "SpatialPixelsDa
 
 
 #Removes all outliers, replacing outliers with NA values
-removeOutlier <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
+removeOutlier.default <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
   #Transforms all attributes in column_names
   for(column in column_names){
     #get column
@@ -78,30 +78,31 @@ removeOutlier <- function(data = "SpatialPointsDataFrame", column_names = c("cha
     }
     data@data[, column] <- attribute
   }
+  removeNA(data, column_names)
   return(data)
 }
 
 
 #Removes all rows containing NA values
-removeNA <- function(data = "SpatialPointsDataFrame", column_name = c("character", "vector")){
-  if(anyNA(data@data[, column_name])){
-    #remove entire row, even if only one value is NA
-    result <- sp.na.omit(data, col.name = column_name)
+removeNA <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
+  for(column in column_names){
+    if(anyNA(data@data[, column])){
+      #remove entire row, even if only one value is NA
+      data <- sp.na.omit(data, col.name = column)
+    }
   }
-  #if there is no NA, it will return the data unchanged
-  else{
-    result <- data
-  }
-  return(result)
+  return(data)
 }
 
 
 #check if there is enough points in dataframe to do kriging (more than 50)
-checkQuantity <- function(data = "SpatialPointsDataFrame", column_name = c("character", "vector")){
+checkQuantity.default <- function(data = "SpatialPointsDataFrame", column_name = c("character", "vector")){
   row_number <- length(na.omit(data@data[, column_name]))
+  #more than 50 points kriging is acceptable, making it TRUE
   if (row_number > 50){
     result <- TRUE
   }
+  #less or equal 50 points kriging is not acceptable, making it FALSE
   else{
     result <- FALSE
   }
@@ -135,7 +136,7 @@ backTransformation <- function(interpolated_data = "SpatialPointsDataFrame", bac
 
 
 #Apply BoxCox Transformation using method loglik
-boxCoxTransformation <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = "logical"){
+boxCoxTransform.default <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = "logical"){
   # lm_model <- lm(formula, data)
   # bc <- boxcox(lm_model)
   # best_lam <- bc$x[which(bc$y==max(bc$y))]
@@ -164,7 +165,7 @@ boxCoxTransformation <- function(formula = "formula", data = c("SpatialPointsDat
 
 
 #checks the normal distribution, if skewness > 1, the data is not normally distributed
-normalDistribution <- function(data = "SpatialPointsDataFrame", formula = "formula"){
+normalDistribution.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   column_name <- formulaToVector(formula, "left")
   attribute <- data %>% extract2(column_name)
   skewness <- skew(attribute)
@@ -250,11 +251,12 @@ checkSpatialStructure <- function(data = "SpatialPointsDataFrame", column_name =
 #ajeitar as fun?oes de anisotropia
 #Treats anisotropy on the attribute automatically
 #if reverse is true, backtransform the data that was treated with isotropic transformation
-handleAnisotropy <- function(data = "SpatialPointsDataFrame",formula = "formula", reverse_data = NULL, reverse = FALSE){
+handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "formula", reverse_data = NULL, reverse = FALSE){
   if(reverse == FALSE){
     anisotropy <- checkAnisotropy(data, formula)
     if(!is.null(anisotropy)){
-      rotated_coords <- rotateAnisotropy(data, anisotropy)
+      rotated_coords <- coords.aniso(data@coords, anisotropy)
+      colnames(rotated_coords) <- c("x", "y")
       result <- data
       result@coords <- rotated_coords
       return(result)
@@ -264,13 +266,18 @@ handleAnisotropy <- function(data = "SpatialPointsDataFrame",formula = "formula"
     }
   }
   else if (reverse == TRUE){
-    result <- rotateBackAnisotropy(data, anisotropy)
+    rotated_coords <- coords.aniso(data@coords, anisotropy, reverse = TRUE)
+    colnames(rotated_coords) <- c("x", "y")
+    result <- data
+    result@coords <- rotated_coords
     return(result)
   }
 }
 
+
+
 #checks anisotropy, if detected, returns anisotropy direction and ratio
-checkAnisotropy <- function(data = "SpatialPointsDataFrame", formula = "formula"){
+checkAnisotropy.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   column_name <- formulaToVector(formula, "left")
   anisotropy <- estimateAnisotropy(data, depVar = column_name)
   if(anisotropy$doRotation == TRUE){
@@ -280,19 +287,6 @@ checkAnisotropy <- function(data = "SpatialPointsDataFrame", formula = "formula"
     return(NULL)  
   }
 }
-
-#rotate the data with the anisotropic values
-rotateAnisotropy <- function(data = "SpatialPointsDataFrame", anis_var = c("list", "vector")){
-  result <- coords.aniso(data@coords, anis_var)
-  return(result)
-}
-
-#backtransforms the data with the anisotropic values
-rotateBackAnisotropy <- function(data = "SpatialPointsDataFrame", anis_var = c("list", "vector")){
-  result <- coords.aniso(data@coords, anis_var, reverse = TRUE)
-  return(result)
-}
-
 
 
 
@@ -352,7 +346,7 @@ checkTrend <- function(data = "SpatialPointsDataFrame", formula = "formula"){
 
 #uses checkTrend to find a trend, and then detrend  by searching the best formula using only the coordinates
 #it will search the best polynomial formula
-detrendFormula <- function(data = "SpatialPointsDataFrame", formula = "formula"){
+detrendFormula.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   degree <- 0
   new_formula <- formula
   best_formula <- formula
@@ -368,11 +362,11 @@ detrendFormula <- function(data = "SpatialPointsDataFrame", formula = "formula")
                     expr(poly(x, y, degree = !!degree)))
       for(right_formula in formulas){
         new_formula <- as.formula(expr(!!left_formula ~ !!right_formula))
+      #choose the detrended formula with the lowest polynomial
         if(!checkTrend(data,new_formula)){
           best_formula <- checkVariogram(new_formula, best_formula, data)
         }
       }
-      #choose the detrended formula with the lowest polynomial
       if(!is.null(best_formula)){
         break
       }
@@ -384,7 +378,7 @@ detrendFormula <- function(data = "SpatialPointsDataFrame", formula = "formula")
 
 #Talvez colocar um function regression_type para escolher o tipo de regressão
 #check trend in residual variogram, same way as the function checkTrend
-checkTrendLm <- function(data = "SpatialPointsDataFrame", formula = "formula"){ #regression_type = function
+checkResidualTrend <- function(data = "SpatialPointsDataFrame", formula = "formula"){ #regression_type = function
   lm_model <- lm(formula, data)
   data@data["residuals"] <- lm_model$residuals
   #makes a variogram with the residuals from the linear regression
@@ -399,7 +393,7 @@ checkTrendLm <- function(data = "SpatialPointsDataFrame", formula = "formula"){ 
 }
 
 #detrend a formula with x+y, selecting the lowest polynomial without trend
-detrend <- function(data = "SpatialPointsDataFrame", formula = "formula"){
+detrendResidual <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   degree <- 0
   lm_model <- NULL
   new_formula <- formula
@@ -419,7 +413,7 @@ detrend <- function(data = "SpatialPointsDataFrame", formula = "formula"){
 #choose the best combination of covariates for Ordinary Co-kriging
 #it can search covariates in the same dataset
 #if covariate_data is specified, it will search for covariates in the auxiliary datasets
-checkCovariatesCKO <- function(data = "SpatialPointsDataFrame", covariate_data = NULL, main_attribute_column = c("character", "vector"), column_names = c("character", "vector")){
+checkCovariatesCKO.default <- function(data = "SpatialPointsDataFrame", covariate_data = NULL, main_attribute_column = c("character", "vector"), column_names = c("character", "vector")){
   if(!is.null(covariate_data)){
     #this is used to reduce the number of points from larger datasets to allow tests like pearsonCorrelation
     for(i in column_names){
@@ -435,7 +429,7 @@ checkCovariatesCKO <- function(data = "SpatialPointsDataFrame", covariate_data =
 
 #choose the best combination of covariates for Geographically Weighted Regression
 #search covariates in the same dataset or in a auxiliary dataset
-checkCovariates <- function(data = "SpatialPointsDataFrame", covariate_data = NULL, main_attribute_column = c("character", "vector"), column_names = c("character", "vector")){
+checkCovariates.default <- function(data = "SpatialPointsDataFrame", covariate_data = NULL, main_attribute_column = c("character", "vector"), column_names = c("character", "vector")){
   if(!is.null(covariate_data)){
     #use this to reduce the number of larger auxiliary dataset to allow tests like pearsonCorrelation
     for(i in column_names){
