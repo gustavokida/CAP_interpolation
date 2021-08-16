@@ -6,31 +6,45 @@ library(GWmodel)
 
 
 #ordinary kriging
-ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL){
-  if(is.null(rmse_data)){
-    #check and remove anisotropy
-    data_variogram <- handleAnisotropy(data, formula)
-    #do the kriging with the generated variogram
-    interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
-    return(interpolated_data$krige_output$var1.pred)
+ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula",
+                                    handle_anisotropy = TRUE, rmse_data = NULL, cap_return = FALSE){
+  #check and remove anisotropy
+  if(isTRUE(handle_anisotropy)){
+    if(is.null(rmse_data)){
+      data_variogram <- handleAnisotropy(data, formula)
+    }
+    else{
+      data_variogram <- handleAnisotropy(rmse_data, formula)
+    }
   }
   else{
-    #check and remove anisotropy
-    data_variogram <- handleAnisotropy(rmse_data, formula)
-    #do the kriging with the generated variogram
-    interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+    data_variogram <- data
+  }
+  
+  #do the kriging with the generated variogram
+  interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+  
+  if(isTRUE(cap_return) && is.null(rmse_data)){
+    return(interpolated_data)
+  }
+  else{
     return(interpolated_data$krige_output$var1.pred)
   }
 }
 
 
 
-universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL){
+universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL, cap_return = FALSE){
   #select the best detrended formula
   new_formula <- detrendFormula(data, formula)
   #performs Universal Kriging with the selected formula
   interpolated_data <- autoKrige(new_formula, data, newdata)
-  return(interpolated_data$krige_output$var1.pred)
+  if(isTRUE(cap_return) && is.null(rmse.data)){
+    return(interpolated_data)
+  }
+  else{
+    return(interpolated_data$krige_output$var1.pred)
+  }
 }
 
 

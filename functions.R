@@ -26,6 +26,9 @@ library(forecast)    #boxcox
 library(raster)   #spPixelsToRaster
 library(EnvStats)   #Coefficient of variation
 
+
+library(geoR)
+
 library(spatial)
 library(nlme)   #gls
 library(rms)    #gls
@@ -251,9 +254,11 @@ checkSpatialStructure <- function(data = "SpatialPointsDataFrame", column_name =
 #ajeitar as fun?oes de anisotropia
 #Treats anisotropy on the attribute automatically
 #if reverse is true, backtransform the data that was treated with isotropic transformation
-handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "formula", reverse_data = NULL, reverse = FALSE){
+handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "formula", anisotropy = NULL, reverse = FALSE){
   if(reverse == FALSE){
-    anisotropy <- checkAnisotropy(data, formula)
+    if(is.null(anisotropy)){
+      anisotropy <- checkAnisotropy(data, formula)
+    }
     if(!is.null(anisotropy)){
       rotated_coords <- coords.aniso(data@coords, anisotropy)
       colnames(rotated_coords) <- c("x", "y")
@@ -265,12 +270,15 @@ handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "
       return(data)
     }
   }
-  else if (reverse == TRUE){
+  else if (reverse == TRUE && !is.null(anisotropy)){
     rotated_coords <- coords.aniso(data@coords, anisotropy, reverse = TRUE)
     colnames(rotated_coords) <- c("x", "y")
     result <- data
     result@coords <- rotated_coords
     return(result)
+  }
+  else{
+    return(data)
   }
 }
 
@@ -344,8 +352,11 @@ checkTrend <- function(data = "SpatialPointsDataFrame", formula = "formula"){
 
 
 
+
 #uses checkTrend to find a trend, and then detrend  by searching the best formula using only the coordinates
 #it will search the best polynomial formula
+
+#Fix case if there is no best formula
 detrendFormula.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   degree <- 0
   new_formula <- formula
@@ -354,11 +365,11 @@ detrendFormula.default <- function(data = "SpatialPointsDataFrame", formula = "f
   if(checkTrend(data, new_formula)){
     best_formula <- NULL
     #checks polynomials from 1 to 10, e.g (x+y), (x+y)^2, (x+y)^3, ...
-    while(degree < 10){
+    while(degree < 2){
       degree = degree + 1
       #test formulas with x, y and x+y
-      formulas <- c(expr(poly(x, degree = !!degree)), 
-                    expr(poly(y, degree = !!degree)),
+      formulas <- c(#expr(poly(x, degree = !!degree)), 
+                    #expr(poly(y, degree = !!degree)),
                     expr(poly(x, y, degree = !!degree)))
       for(right_formula in formulas){
         new_formula <- as.formula(expr(!!left_formula ~ !!right_formula))

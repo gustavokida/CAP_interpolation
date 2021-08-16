@@ -11,8 +11,21 @@ library(raster)
 #colocar tratamento anisotropia
 #procurar por fun?ao que busca automaticamente o melhor idp
 #IDW
-inverseDistanceWeighted.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
-  invisible(capture.output(result <- idw(formula, data, data@coords, newdata = newdata, idp = 2.0)$var1.pred))
+inverseDistanceWeighted.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                                            formula = "formula", handle_anisotropy = TRUE, rmse_data = NULL){
+  #check and remove anisotropy
+  if(isTRUE(handle_anisotropy)){
+      anisotropy <- checkAnisotropy(data, formula)
+      data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
+      newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy)
+  }
+  
+  newdata@data$result <- idw(formula = formula, locations = data, newdata = newdata)$var1.pred
+  if(isTRUE(handle_anisotropy)){
+    newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+  }
+
+  result <- newdata@data$result
   return(result)
 }
 

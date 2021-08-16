@@ -25,6 +25,8 @@ boxCoxLambda.cap <- function(object){
 
 
 boxCoxTransform.cap <- function(object){
+  stopifnot(!is.null(object$lambda))
+  
   left_var <- formulaToVector(object$formula, "left")
   object$data@data[, left_var] <- boxCoxTransformation(object$formula, object$data, object$lambda, object$reverse_boxcox)
   if(isFALSE(object$reverse_boxcox)){
@@ -49,18 +51,26 @@ checkAnisotropy.cap <- function(object = cap()){
 }
 
 
-
+#object$reverse_anisotropy = FALSE - original coords
+#object$reverse_anisotropy = TRUE - rotated coords
 handleAnisotropy.cap <- function(object){
   if(is.empty(object$anisotropy)){
-    object <- checkAnisotropy(data, formula)
+    object <- checkAnisotropy(object = object)
   }
   if(is.null(object$anisotropy)){
     return(object)
   }
   else{
+    object$reverse_anisotropy <- !object$reverse_anisotropy
+    
     rotated_coords <- coords.aniso(object$data@coords, object$anisotropy, reverse = object$reverse_anisotropy)
     colnames(rotated_coords) <- c("x", "y")
     object$data@coords <- rotated_coords
+    
+    rotated_newdata_coords <- coords.aniso(object$newdata@coords, object$anisotropy, reverse = object$reverse_anisotropy)
+    colnames(rotated_newdata_coords) <- c("x", "y")
+    object$newdata@coords <- rotated_newdata_coords
+    
     return(object)
   }
 }

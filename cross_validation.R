@@ -33,17 +33,18 @@ rmse <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInter
 }
 
 
-
-rmse.default <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInterpolation = "function", covariate_data = NULL){
+#use same model in cross validation.    reference: A tutorial guide to geostatistics computing and modelling variograms and kriging
+rmse.default <- function(data = "SpatialPointsDataFrame", formula = "formula", funcInterpolation = "function", covariate_data = NULL, handle_anisotropy = TRUE){
   column_name <- formulaToVector(formula, "left")
   right_side <- formulaToVector(formula, "right")
   all_points_predicted <- NULL
+  
   if(is.null(covariate_data)){
     for(i in 1:length(data)){
       new_formula <- makeFormula(column_name, right_side)
       point_to_predict <- data
       data_without_point <- data[-i,]
-      points_predicted <- funcInterpolation(data_without_point, point_to_predict, new_formula)
+      capture.output(points_predicted <- funcInterpolation(data = data_without_point, newdata = point_to_predict, formula = new_formula, handle_anisotropy = handle_anisotropy, rmse_data = data))
       all_points_predicted[i] <- points_predicted[i]
     }
   }
@@ -52,7 +53,8 @@ rmse.default <- function(data = "SpatialPointsDataFrame", formula = "formula", f
       new_formula <- makeFormula(column_name, right_side)
       point_to_predict <- data
       data_without_point <- data[-i,]
-      points_predicted <- funcInterpolation(data_without_point, point_to_predict, new_formula, covariate_data)
+      capture.output(points_predicted <- funcInterpolation(data = data_without_point, newdata = point_to_predict, formula = new_formula, covariate_data = covariate_data,
+                                            handle_anisotropy = handle_anisotropy, rmse_data = data))
       all_points_predicted[i] <- points_predicted[i]
     }
   }

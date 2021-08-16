@@ -1,10 +1,4 @@
 
-#OBJECT S4
-cap <- setClass("cap", slots = list(data = "SpatialPointsDataFrame", newdata = "SpatialPixelsDataFrame", formula = "formula",
-                                    reverse_boxcox = "logical", trend = "logical", reverse_anisotropy = "logical", point_quantity = "logical",
-                                    normal_distribution = "logical", lambda = "numeric", anisotropy = "numeric", rmse = c(NULL, "numeric")))
-
-
 #OBJECT S3
 cap <- function(object = NULL, formula = NULL, data = NULL, newdata = NULL, covariate_data = NULL){
   stopifnot(("cap" %in% is(object) | is.null(object)))
@@ -15,8 +9,8 @@ cap <- function(object = NULL, formula = NULL, data = NULL, newdata = NULL, cova
   
   if(is.null(object)){
     object <- list(formula = formula, data = data, newdata = newdata, covariate_data = covariate_data,
-                   reverse_boxcox = FALSE, trend = FALSE, reverse_anisotropy = FALSE, point_quantity = FALSE, normal_distribution = FALSE,
-                    lambda = numeric(0), anisotropy = numeric(0), rmse = numeric(0))
+                   trend = FALSE, point_quantity = FALSE, normal_distribution = FALSE, lambda = numeric(0), reverse_boxcox = FALSE,
+                   handle_anisotropy = TRUE, anisotropy = numeric(0), reverse_anisotropy = FALSE, rmse = numeric(0), interpolation_function = NULL, variogram = NULL)
     class(object) <- "cap"
   }
   else{
