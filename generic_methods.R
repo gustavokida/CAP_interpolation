@@ -2,6 +2,8 @@
 #functions
 removeOutlier <- function(object, ...) UseMethod("removeOutlier")
 
+removeNA <- function(object, ...) UseMethod("removeNA")
+
 checkQuantity<- function(object, ...) UseMethod("checkQuantity")
 
 boxCoxLambda <- function(object, ...) UseMethod("boxCoxLambda")
@@ -20,12 +22,15 @@ checkCovariatesCKO <- function(object, ...) UseMethod("checkCovariatesCKO")
 
 checkCovariates <- function(object, ...) UseMethod("checkCovariates")
 
+estimateIdp <- function(object, ...) UseMethod("estimateIdp")
+
 
 #validation
 rmse <- function(object, ...) UseMethod("rmse")
 
 
 #interpolation
+autoInterpolation <- function(object, ...) UseMethod("autoInterpolation")
 
 #kriging
 ordinaryKriging <- function(object, ...) UseMethod("ordinaryKriging")
@@ -39,6 +44,8 @@ regressionKriging <- function(object, ...) UseMethod("regressionKriging")
 #deterministic
 
 inverseDistanceWeighted <- function(object, ...) UseMethod("inverseDistanceWeighted")
+
+eidw <- function(object, ...) UseMethod("eidw")
 
 nearestNeighbor <- function(object, ...) UseMethod("nearestNeighbor")
 

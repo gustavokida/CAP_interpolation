@@ -15,8 +15,8 @@ library(gvlma)    #skew, kurtosis, heteroscedasticity
 library(Hmisc)    #rcorr for pearson correlation
 library(gstat)    #variogram
 library(automap)    #autofitVariogram
-library(ape)    #Moran's I, checks for spatial autocorrelation
-library(spdep)  #Moran's I
+#library(ape)    #Moran's I, checks for spatial autocorrelation
+#library(spdep)  #Moran's I
 library(geoR)   #trend spatial(ainda verificando), #coords.aniso
 library(rlang)    #formulaToVector
 library(intamap)    #estimateAnisotropy
@@ -69,8 +69,12 @@ spPixelsToRaster <- function(data = c("SpatialPointsDataFrame", "SpatialPixelsDa
 
 #Removes all outliers, replacing outliers with NA values
 removeOutlier.default <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
-  #Transforms all attributes in column_names
+  #removes value "1" from vector
+  column_names <- column_names[!(column_names %in% "1")]
   for(column in column_names){
+    if(column != "1"){
+      
+    }
     #get column
     attribute <- data %>% extract2(column)
     #get outliers
@@ -81,13 +85,13 @@ removeOutlier.default <- function(data = "SpatialPointsDataFrame", column_names 
     }
     data@data[, column] <- attribute
   }
-  removeNA(data, column_names)
+  data <- removeNA(data, column_names)
   return(data)
 }
 
 
 #Removes all rows containing NA values
-removeNA <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
+removeNA.default <- function(data = "SpatialPointsDataFrame", column_names = c("character", "vector")){
   for(column in column_names){
     if(anyNA(data@data[, column])){
       #remove entire row, even if only one value is NA
@@ -137,9 +141,14 @@ backTransformation <- function(interpolated_data = "SpatialPointsDataFrame", bac
   
 }
 
+boxCoxLambda.default <- function(formula = "formula", data = "SpatialPointsDataFrame"){
+  left_var <- formulaToVector(formula, "left")
+  lambda <- BoxCox.lambda(data@data[, left_var], method = 'loglik')
+  return(lambda)
+}
 
 #Apply BoxCox Transformation using method loglik
-boxCoxTransform.default <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = "logical"){
+boxCoxTransform.default <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = FALSE){
   # lm_model <- lm(formula, data)
   # bc <- boxcox(lm_model)
   # best_lam <- bc$x[which(bc$y==max(bc$y))]
@@ -212,6 +221,19 @@ formulaToVector <- function(formula = "formula", side = c("character", "vector")
 }
 
 
+#estimates the best value p for idw
+estimateIdp.default <- function(data = "SpatialPointsDataFrame",formula = "formula", funcInterpolation = "function"){
+  idp_range <- seq(0.5, 4, 0.5)
+  rmse_values <- rep(NA, length(idp_range))
+  for(i in seq(along=idp_range)){
+    rmse_values[i] <- rmse(data = data, formula = formula, funcInterpolation = funcInterpolation, idp = idp_range[i])
+  }
+  best <- which(rmse_values == min(rmse_values))[1]
+  return(idp_range[best])
+}
+
+
+
 #Currently not in use
 modelAnalysis <- function(model ="lm"){
   analysis_result <- gvlma(model)
@@ -255,22 +277,24 @@ checkSpatialStructure <- function(data = "SpatialPointsDataFrame", column_name =
 #Treats anisotropy on the attribute automatically
 #if reverse is true, backtransform the data that was treated with isotropic transformation
 handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "formula", anisotropy = NULL, reverse = FALSE){
-  if(reverse == FALSE){
+  if(isFALSE(reverse)){
     if(is.null(anisotropy)){
       anisotropy <- checkAnisotropy(data, formula)
     }
-    if(!is.null(anisotropy)){
-      rotated_coords <- coords.aniso(data@coords, anisotropy)
-      colnames(rotated_coords) <- c("x", "y")
-      result <- data
-      result@coords <- rotated_coords
+    if(!is.null(anisotropy) && !isFALSE(anisotropy)){
+      #rotated_coords <- coords.aniso(data@coords, anisotropy)
+      rotated_coords <- rotateAnisotropicData(data, anisotropy)
+      #colnames(rotated_coords) <- c("x", "y")
+      #result <- data
+      #result@coords <- rotated_coords
+      result <- rotated_coords
       return(result)
     }
     else{
       return(data)
     }
   }
-  else if (reverse == TRUE && !is.null(anisotropy)){
+  else if (isTRUE(reverse) && !is.null(anisotropy) && !isFALSE(anisotropy)){
     rotated_coords <- coords.aniso(data@coords, anisotropy, reverse = TRUE)
     colnames(rotated_coords) <- c("x", "y")
     result <- data
@@ -289,10 +313,11 @@ checkAnisotropy.default <- function(data = "SpatialPointsDataFrame", formula = "
   column_name <- formulaToVector(formula, "left")
   anisotropy <- estimateAnisotropy(data, depVar = column_name)
   if(anisotropy$doRotation == TRUE){
-    return(c(anisotropy$direction, anisotropy$ratio))
+    #return(c(anisotropy$direction, anisotropy$ratio))
+    return(anisotropy)
   }
   else{
-    return(NULL)  
+    return(FALSE)  
   }
 }
 

@@ -91,3 +91,213 @@ print(rmse(teste2, HAL~1, ordinaryKriging))
 #teste.grid$gwrk <- 
 
 
+
+
+
+
+#Testes para o artigo
+
+#elemento P
+#sem tratamento
+cap_P <- cap(formula = P~1, data = dados, newdata = highres.grid)
+cap_P$handle_anisotropy <- FALSE
+cap_P$handle_assimetry <- FALSE
+
+#com tratamento de outlier
+cap_P_no_outlier <- removeOutlier(object = cap_P)
+
+#com tratamento de outlier e anisotropia
+cap_P_no_outlier_aniso <- cap_P_no_outlier
+cap_P_no_outlier_aniso$handle_anisotropy <- TRUE
+
+#com tratamento de anisotropia e assimetria
+cap_P_no_aniso_assimetry <- cap_P
+cap_P_no_aniso_assimetry$handle_anisotropy <- TRUE
+cap_P_no_aniso_assimetry$handle_assimetry <- TRUE
+
+
+
+#IDW
+cap_P_IDW <- inverseDistanceWeighted(cap_P)
+cap_P_IDW <- rmse(cap_P_IDW)
+
+cap_P_no_outlier_IDW <- inverseDistanceWeighted(cap_P_no_outlier)
+cap_P_no_outlier_IDW <- rmse(cap_P_no_outlier_IDW)
+
+cap_P_no_outlier_aniso_IDW <- inverseDistanceWeighted(cap_P_no_outlier_aniso)
+cap_P_no_outlier_aniso_IDW <- rmse(cap_P_no_outlier_aniso_IDW)
+
+cap_P_no_aniso_assimetry_IDW <- inverseDistanceWeighted(cap_P_no_aniso_assimetry)
+cap_P_no_aniso_assimetry_IDW <- rmse(cap_P_no_aniso_assimetry_IDW)
+
+#KO
+cap_P_KO <- ordinaryKriging(cap_P)
+cap_P_KO <- rmse(cap_P_KO)
+
+cap_P_no_outlier_KO <- ordinaryKriging(cap_P_no_outlier)
+cap_P_no_outlier_KO <- rmse(cap_P_no_outlier_KO)
+
+cap_P_no_outlier_aniso_KO <- ordinaryKriging(cap_P_no_outlier_aniso)
+cap_P_no_outlier_aniso_KO <- rmse(cap_P_no_outlier_aniso_KO)
+
+cap_P_no_aniso_assimetry_KO <- ordinaryKriging(cap_P_no_aniso_assimetry)
+cap_P_no_aniso_assimetry_KO <- rmse(cap_P_no_aniso_assimetry_KO)
+
+cap_P_no_aniso_assimetry_UK <- universalKriging(cap_P_no_aniso_assimetry)
+cap_P_no_aniso_assimetry_UK <- rmse(cap_P_no_aniso_assimetry_UK)
+
+#plot
+plot(cap_P_IDW)
+plot(cap_P_no_outlier_IDW)
+plot(cap_P_no_outlier_aniso_IDW)
+plot(cap_P_no_aniso_assimetry_IDW)
+
+plot(cap_P_KO)
+plot(cap_P_no_outlier_KO)
+plot(cap_P_no_outlier_aniso_KO)
+plot(cap_P_no_aniso_assimetry_KO)
+
+
+spplot(cap_P_IDW$newdata, zcol = "IDW_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(b) Sem tratamentos"))
+spplot(cap_P_no_outlier_IDW$newdata, zcol = "IDW_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(d) Com remoção de outliers"))
+spplot(cap_P_no_aniso_assimetry_IDW$newdata, zcol = "IDW_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(e) Com remoção de anisotropia"))
+spplot(cap_P_no_outlier_aniso_IDW$newdata, zcol = "IDW_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(g) Com rem. de outliers/anisotropia"))
+
+spplot(cap_P_no_outlier_aniso_IDW$newdata, zcol = "IDW_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(c) Seguindo o modelo"))
+
+spplot(cap_P_KO$newdata, zcol = "OK_P", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(a) Sem tratamentos"))
+spplot(cap_P_no_outlier_KO$newdata, zcol = "OK_P", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(c) Com remoção de outliers"))
+spplot(cap_P_no_outlier_aniso_KO$newdata, zcol = "OK_P", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(f) Com rem. de outliers/anisotropia"))
+
+
+
+
+#elemento HAL
+cap_HAL <- cap(formula = HAL~1, data = dados, newdata = highres.grid)
+cap_HAL$handle_anisotropy <- FALSE
+cap_HAL$handle_assimetry <- FALSE
+
+#com tratamento de outlier
+cap_HAL_no_outlier <- removeOutlier(object = cap_HAL)
+
+#com tratamento de outlier e anisotropia
+cap_HAL_no_outlier_aniso <- cap_HAL_no_outlier
+cap_HAL_no_outlier_aniso$handle_anisotropy <- TRUE
+
+#com tratamento de anisotropia
+cap_HAL_no_aniso <- cap_HAL
+cap_HAL_no_aniso$handle_anisotropy <- TRUE
+
+#com tratamento de anisotropia e assimetria
+cap_HAL_no_aniso_assimetry <- cap_HAL
+cap_HAL_no_aniso_assimetry$handle_anisotropy <- TRUE
+cap_HAL_no_aniso_assimetry$handle_assimetry <- TRUE
+
+#IDW
+cap_HAL_IDW <- inverseDistanceWeighted(cap_HAL)
+cap_HAL_IDW <- rmse(cap_HAL_IDW)
+
+cap_HAL_no_outlier_IDW <- inverseDistanceWeighted(cap_HAL_no_outlier)
+cap_HAL_no_outlier_IDW <- rmse(cap_HAL_no_outlier_IDW)
+
+cap_HAL_no_outlier_aniso_IDW <- inverseDistanceWeighted(cap_HAL_no_outlier_aniso)
+cap_HAL_no_outlier_aniso_IDW <- rmse(cap_HAL_no_outlier_aniso_IDW)
+
+cap_HAL_no_aniso_IDW <- inverseDistanceWeighted(cap_HAL_no_aniso)
+cap_HAL_no_aniso_IDW <- rmse(cap_HAL_no_aniso_IDW)
+
+cap_HAL_no_aniso_assimetry_IDW <- inverseDistanceWeighted(cap_HAL_no_aniso_assimetry)
+cap_HAL_no_aniso_assimetry_IDW <- rmse(cap_HAL_no_aniso_assimetry_IDW)
+
+
+#KO
+cap_HAL_KO <- ordinaryKriging(cap_HAL)
+cap_HAL_KO <- rmse(cap_HAL_KO)
+
+cap_HAL_no_outlier_KO <- ordinaryKriging(cap_HAL_no_outlier)
+cap_HAL_no_outlier_KO <- rmse(cap_HAL_no_outlier_KO)
+
+cap_HAL_no_outlier_aniso_KO <- ordinaryKriging(cap_HAL_no_outlier_aniso)
+cap_HAL_no_outlier_aniso_KO <- rmse(cap_HAL_no_outlier_aniso_KO)
+
+cap_HAL_no_aniso_KO <- ordinaryKriging(cap_HAL_no_aniso)
+cap_HAL_no_aniso_KO <- rmse(cap_HAL_no_aniso_KO)
+
+cap_HAL_no_aniso_assimetry_KO <- ordinaryKriging(cap_HAL_no_aniso_assimetry)
+cap_HAL_no_aniso_assimetry_KO <- rmse(cap_HAL_no_aniso_assimetry_KO)
+
+#plot
+plot(cap_HAL_IDW)
+plot(cap_HAL_no_outlier_IDW)
+plot(cap_HAL_no_outlier_aniso_IDW)
+plot(cap_HAL_no_aniso_IDW)
+plot(cap_HAL_no_aniso_assimetry_IDW)
+
+plot(cap_HAL_KO)
+plot(cap_HAL_no_outlier_KO)
+plot(cap_HAL_no_outlier_aniso_KO)
+plot(cap_HAL_no_aniso_KO)
+plot(cap_HAL_no_aniso_assimetry_KO)
+
+spplot(cap_HAL_IDW$newdata, zcol = "IDW_HAL", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(b) Sem tratamentos"))
+spplot(cap_HAL_no_outlier_IDW$newdata, zcol = "IDW_HAL", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(d) Com remoção de outliers"))
+spplot(cap_HAL_no_aniso_IDW$newdata, zcol = "IDW_HAL", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(f) Com remoção de anisotropia"))
+spplot(cap_HAL_no_aniso_assimetry_IDW$newdata, zcol = "IDW_HAL", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(h) Com remoção de assimetria"))
+
+spplot(cap_HAL_KO$newdata, zcol = "OK_HAL", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(a) Sem tratamentos"))
+#spplot(cap_HAL_no_outlier_KO$newdata, zcol = "OK_HAL", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(c) Com remoção de outliers"))
+
+spplot(cap_HAL_no_outlier_KO$newdata, zcol = "OK_HAL", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(c) Seguindo o modelo"))
+plot(cap_HAL_no_outlier_KO$variogram$exp_var, cap_HAL_no_outlier_KO$variogram$var_model, sub = list(font = 1, cex = 1, label = "(b) Seguindo o modelo"))
+
+spplot(cap_HAL_no_aniso_KO$newdata, zcol = "OK_HAL", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(e) Com remoção de anisotropia"))
+spplot(cap_HAL_no_aniso_assimetry_KO$newdata, zcol = "OK_HAL", main = list(font = 1, cex = 1, label = "KO"), sub = list(font = 1, cex = 1, label = "(g) Com remoção de assimetria"))
+
+plot(cap_HAL_no_aniso_assimetry_KO$variogram$exp_var, cap_HAL_no_aniso_assimetry_KO$variogram$var_model, sub = list(font = 1, cex = 1, label = "(d) Com remoção de assimetria"))
+
+
+
+
+
+
+#teste artigo_2
+cap_P <- cap(formula = P~1, data = dados, newdata = highres.grid)
+cap_HAL <- cap(formula = HAL~1, data = dados, newdata = highres.grid)
+
+cap_P_auto <- autoInterpolation(cap_P)
+cap_P_auto <- rmse(cap_P_auto)
+
+cap_P_IDW <- inverseDistanceWeighted(cap_P)
+cap_P_IDW <- rmse(cap_P_IDW)
+
+cap_P_OK <- ordinaryKriging(cap_P)
+cap_P_OK <- rmse(cap_P_OK)
+
+
+
+cap_HAL_auto <- autoInterpolation(cap_HAL)
+cap_HAL_auto <- rmse(cap_HAL_auto)
+
+cap_HAL_IDW <- inverseDistanceWeighted(cap_HAL)
+cap_HAL_IDW <- rmse(cap_HAL_IDW)
+
+cap_HAL_OK <- ordinaryKriging(cap_HAL)
+cap_HAL_OK <- rmse(cap_HAL_OK)
+
+
+plot(cap_P_auto)
+plot(cap_P_IDW)
+plot(cap_P_OK)
+
+plot(cap_HAL_auto)
+plot(cap_HAL_IDW)
+plot(cap_HAL_OK)
+
+
+
+
+
+cap_P_EIDW <- eidw(cap_P_no_outlier_aniso)
+cap_P_EIDW <- rmse(cap_P_EIDW)
+plot(cap_P_EIDW)
+

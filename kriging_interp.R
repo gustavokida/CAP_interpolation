@@ -7,7 +7,27 @@ library(GWmodel)
 
 #ordinary kriging
 ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula",
-                                    handle_anisotropy = TRUE, rmse_data = NULL, cap_return = FALSE){
+                                    data_variogram = NULL, handle_anisotropy = TRUE, handle_assimetry = TRUE, rmse_data = NULL, cap_return = FALSE, idp = NULL){
+  #check and remove assimetry
+  if(isTRUE(handle_assimetry)){
+    if(is.null(rmse_data)){
+      normal_distribution <- normalDistribution(data = data, formula = formula)
+      if(isFALSE(normal_distribution)){
+        lambda <- boxCoxLambda(formula = formula, data = data)
+        main_var <- formulaToVector(formula = formula, side = "left")
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = FALSE)
+      }
+    }
+    else{
+      normal_distribution <- normalDistribution(data = rmse_data, formula = formula)
+      if(isFALSE(normal_distribution)){
+        lambda <- boxCoxLambda(formula = formula, data = rmse_data)
+        main_var <- formulaToVector(formula = formula, side = "left")
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = FALSE)
+        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data, lambda = lambda, reverseBoxCox = FALSE)
+      }
+    }
+  }
   #check and remove anisotropy
   if(isTRUE(handle_anisotropy)){
     if(is.null(rmse_data)){
@@ -18,11 +38,31 @@ ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c
     }
   }
   else{
-    data_variogram <- data
+    if(is.null(rmse_data) && is.null(data_variogram)){
+      data_variogram <- data
+    }
+    else if(!is.null(rmse_data) && is.null(data_variogram)){
+      data_variogram <- rmse_data
+    }
   }
   
   #do the kriging with the generated variogram
   interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+  
+  #back-transforms data to assimetry
+  if(isTRUE(handle_assimetry)){
+    if(isFALSE(normal_distribution)){
+      if(is.null(rmse_data)){
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
+      }
+      else{
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
+        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data, lambda = lambda, reverseBoxCox = TRUE)
+      }
+      interpolated_data$krige_output$var1.pred <- boxCoxTransform(formula = formula, data = interpolated_data, lambda = lambda, reverseBoxCox = TRUE)
+    }
+  }
+  
   
   if(isTRUE(cap_return) && is.null(rmse_data)){
     return(interpolated_data)
@@ -34,12 +74,13 @@ ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c
 
 
 
-universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", rmse_data = NULL, cap_return = FALSE){
+universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                                     formula = "formula", rmse_data = NULL, cap_return = FALSE, idp = NULL){
   #select the best detrended formula
-  new_formula <- detrendFormula(data, formula)
+  new_formula <- detrendFormula(data = data, formula = formula)
   #performs Universal Kriging with the selected formula
   interpolated_data <- autoKrige(new_formula, data, newdata)
-  if(isTRUE(cap_return) && is.null(rmse.data)){
+  if(isTRUE(cap_return) && is.null(rmse_data)){
     return(interpolated_data)
   }
   else{
@@ -50,7 +91,7 @@ universalKriging.default <- function(data = "SpatialPointsDataFrame", newdata = 
 
 
 #automatically do Universal Kriging if a trend is detected, otherwise performs ordinary kriging
-autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula"){
+autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", idp = NULL){
   #check trend
   if(checkTrend(data, formula)){
     #finds the best formula
@@ -74,7 +115,7 @@ autoKriging <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPoi
 #Cokriging function, it is necessary to inform the covariate data
 #if the covariate data is in the primary dataset, put the same dataset in the covariate_data e.g. data = dataset, covariate_data = dataset
 coKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
-                              formula = "formula", covariate_data = "SpatialPointsDataFrame", rmse_data = NULL){
+                              formula = "formula", covariate_data = "SpatialPointsDataFrame", rmse_data = NULL, idp = NULL){
   #separate the primary variable from the auxiliary variables
   left_var <- formulaToVector(formula = formula, side = "left")
   right_cov <- formulaToVector(formula = formula, side = "right")
