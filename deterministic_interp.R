@@ -13,66 +13,45 @@ library(raster)
 #IDW
 inverseDistanceWeighted.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
                                             formula = "formula", handle_anisotropy = TRUE, handle_assimetry = FALSE, rmse_data = NULL, idp = 2){
-  # #check and remove assimetry
-  # if(isTRUE(handle_assimetry)){
-  #   if(is.null(rmse_data)){
-  #     normal_distribution <- normalDistribution(data = data, formula = formula)
-  #   }
-  #   else{
-  #     normal_distribution <- normalDistribution(data = rmse_data, formula = formula)
-  #   }
-  #   if(isFALSE(normal_distribution)){
-  #     if(is.null(rmse_data)){
-  #       lambda <- boxCoxLambda(formula = formula, data = data)
-  #     }
-  #     else{
-  #       lambda <- boxCoxLambda(formula = formula, data = rmse_data)
-  #     }
-  #     main_var <- formulaToVector(formula = formula, side = "left")
-  #     data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = FALSE)
-  #   }
-  # }
-  
+
   #check and remove anisotropy
-  # if(isTRUE(handle_anisotropy)){
-  #   if(is.null(rmse_data)){
-  #     anisotropy <- checkAnisotropy(data, formula)
-  #   }
-  #   else{
-  #     anisotropy <- checkAnisotropy(rmse_data, formula)
-  #   }
-  #   data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
-  #   newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy)
-  # }
+  if(isTRUE(handle_anisotropy)){
+    if(is.null(rmse_data)){
+      anisotropy <- checkAnisotropy(data=data, formula=formula)
+    }
+    else{
+      anisotropy <- checkAnisotropy(data=rmse_data, formula=formula)
+    }
+    data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
+    newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy)
+  }
   
   #perform idw interpolation
-  newdata@data$result <- idw(formula = formula, locations = data, newdata = newdata, idp = idp)$var1.pred
+  newdata@data$result <- gstat::idw(formula = formula, locations = data, newdata = newdata, idp = idp)$var1.pred
   
   #rotates coordinates back to anisotropic
-  # if(isTRUE(handle_anisotropy)){
-  #   data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy, reverse = TRUE)
-  #   newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy, reverse = TRUE)
-  # }
-  
-  # #back-transforms data to assimetry
-  # if(isTRUE(handle_assimetry)){
-  #   if(isFALSE(normal_distribution)){
-  #     data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
-  #     newdata@data$result <- boxCoxTransform(formula = result~1, data = newdata, lambda = lambda, reverseBoxCox = TRUE)
-  #   }
-  # }
+  if(isTRUE(handle_anisotropy)){
+    data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+    newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+  }
   
   result <- newdata@data$result
   
   return(result)
 }
 
+
+
 #Maciej Tomczak 1998
 #Comparison of different spatial interpolation methods for historical hydrographic data of the lowermost Mississippi River 2019
-eidw.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", handle_anisotropy = TRUE,
-                         handle_assimetry = FALSE, rmse_data = NULL, idp = 2, smooth = 0, n = 10){
-  
-  if(isTRUE(handle_anisotropy)){
+
+eidw.default <- function(data = "SpatialPointsDataFrame",
+                         newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                         formula = "formula", handle_anisotropy = TRUE,
+                         handle_assimetry = FALSE, rmse_data = NULL,
+                         idp = 2, smooth = 0, n = 10, anisotropy = NULL){
+  #anisotropy <- NULL
+  if(is.null(anisotropy)){
     if(is.null(rmse_data)){
       anisotropy <- checkAnisotropy(data, formula)
     }
@@ -80,6 +59,10 @@ eidw.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPo
       anisotropy <- checkAnisotropy(rmse_data, formula)
     }
   }
+  anisotropy_temp <- NULL
+  anisotropy_temp$direction <- anisotropy[1]*pi/180
+  anisotropy_temp$ratio <- anisotropy[2]
+  anisotropy <- anisotropy_temp
   #anisotropy$direction is angle, anisotropy$ratio is ratio
   #values for EIDW
   txx <- cos(anisotropy$direction)/anisotropy$ratio

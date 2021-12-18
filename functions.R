@@ -8,7 +8,7 @@ zscore2 <- dados$MG[abs((dados$MG-mean(dados$MG))/sd(dados$MG)) <= 2]
 library(methods)
 library(dplyr)    #na_if
 library(magrittr)   #pipeline
-library(spatialEco)   #removeNA
+library(spatialEco)   #removeNA, #sp.na.omit
 library(psych)    #normal distribution
 library(lmtest)   #bptest
 library(gvlma)    #skew, kurtosis, heteroscedasticity
@@ -21,13 +21,31 @@ library(geoR)   #trend spatial(ainda verificando), #coords.aniso
 library(rlang)    #formulaToVector
 library(intamap)    #estimateAnisotropy
 library(car)    #vif
-library(MASS)   #stepAIC, boxcox
+library(MASS)   #stepAIC
 library(forecast)    #boxcox
 library(raster)   #spPixelsToRaster
 library(EnvStats)   #Coefficient of variation
 
+library(rlist)
 
-library(geoR)
+library(GSIF)   #Regression Kriging
+library(gstat)    #cokriging
+library(automap)    #autoKrige
+library(GWmodel)
+
+library(gstat)    #idw, nn
+#valida??o cruzada C - IDW
+library(spm) #valida??o cruzada - IDW
+library(fields)   #tps
+library(car)    #predict for tps
+library(interp)   #TIN
+library(raster)
+
+library(spm)    #idwcv
+library(utils)
+
+
+
 
 library(spatial)
 library(nlme)   #gls
@@ -103,10 +121,14 @@ removeNA.default <- function(data = "SpatialPointsDataFrame", column_names = c("
 
 
 #check if there is enough points in dataframe to do kriging (more than 50)
-checkQuantity.default <- function(data = "SpatialPointsDataFrame", column_name = c("character", "vector")){
+checkQuantity.default <- function(data = "SpatialPointsDataFrame", column_name = c("character", "vector"), aniso = FALSE){
   row_number <- length(na.omit(data@data[, column_name]))
+  quantity <- 50
   #more than 50 points kriging is acceptable, making it TRUE
-  if (row_number > 50){
+  if (isTRUE(aniso)){
+    quantity <- 250
+  }
+  if (row_number > quantity){
     result <- TRUE
   }
   #less or equal 50 points kriging is not acceptable, making it FALSE
@@ -149,9 +171,6 @@ boxCoxLambda.default <- function(formula = "formula", data = "SpatialPointsDataF
 
 #Apply BoxCox Transformation using method loglik
 boxCoxTransform.default <- function(formula = "formula", data = c("SpatialPointsDataFrame", "autoKrige"), lambda = "numeric", reverseBoxCox = FALSE){
-  # lm_model <- lm(formula, data)
-  # bc <- boxcox(lm_model)
-  # best_lam <- bc$x[which(bc$y==max(bc$y))]
   bc <- NULL
   left_var <- formulaToVector(formula, "left")
   if (isFALSE(reverseBoxCox)){
@@ -175,6 +194,11 @@ boxCoxTransform.default <- function(formula = "formula", data = c("SpatialPoints
   return(output)
 }
 
+
+#boxcoxtransform.default
+# lm_model <- lm(formula, data)
+# bc <- boxcox(lm_model)
+# best_lam <- bc$x[which(bc$y==max(bc$y))]
 
 #checks the normal distribution, if skewness > 1, the data is not normally distributed
 normalDistribution.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
@@ -274,6 +298,8 @@ checkSpatialStructure <- function(data = "SpatialPointsDataFrame", column_name =
 
 #verificar ordem para rotacionar de volta os dados
 #ajeitar as fun?oes de anisotropia
+
+
 #Treats anisotropy on the attribute automatically
 #if reverse is true, backtransform the data that was treated with isotropic transformation
 handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "formula", anisotropy = NULL, reverse = FALSE){
@@ -282,12 +308,12 @@ handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "
       anisotropy <- checkAnisotropy(data, formula)
     }
     if(!is.null(anisotropy) && !isFALSE(anisotropy)){
-      #rotated_coords <- coords.aniso(data@coords, anisotropy)
-      rotated_coords <- rotateAnisotropicData(data, anisotropy)
-      #colnames(rotated_coords) <- c("x", "y")
-      #result <- data
-      #result@coords <- rotated_coords
-      result <- rotated_coords
+      # rotated_coords <- intamap::rotateAnisotropicData(data, anisotropy)
+      # result <- rotated_coords
+      rotated_coords <- coords.aniso(data@coords, anisotropy)
+      colnames(rotated_coords) <- c("x", "y")
+      result <- data
+      result@coords <- rotated_coords
       return(result)
     }
     else{
@@ -307,14 +333,13 @@ handleAnisotropy.default <- function(data = "SpatialPointsDataFrame",formula = "
 }
 
 
-
 #checks anisotropy, if detected, returns anisotropy direction and ratio
 checkAnisotropy.default <- function(data = "SpatialPointsDataFrame", formula = "formula"){
   column_name <- formulaToVector(formula, "left")
   anisotropy <- estimateAnisotropy(data, depVar = column_name)
   if(anisotropy$doRotation == TRUE){
-    #return(c(anisotropy$direction, anisotropy$ratio))
-    return(anisotropy)
+    return(c(anisotropy$direction, anisotropy$ratio))
+    #return(anisotropy)
   }
   else{
     return(FALSE)  

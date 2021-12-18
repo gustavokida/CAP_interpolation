@@ -270,6 +270,14 @@ cap_P_auto <- rmse(cap_P_auto)
 cap_P_IDW <- inverseDistanceWeighted(cap_P)
 cap_P_IDW <- rmse(cap_P_IDW)
 
+cap_P_IDW <- inverseDistanceWeighted(cap_P_IDW)
+cap_P_IDW <- removeOutlier(cap_P)
+cap_P_IDW$handle_anisotropy <- TRUE
+cap_P_IDW <- eidw(cap_P_IDW)
+cap_P_IDW <- rmse(cap_P_IDW)
+
+spplot(cap_P_IDW$newdata, zcol = "eidw_P", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "(c) Seguindo o modelo"))
+
 cap_P_OK <- ordinaryKriging(cap_P)
 cap_P_OK <- rmse(cap_P_OK)
 
@@ -301,3 +309,187 @@ cap_P_EIDW <- eidw(cap_P_no_outlier_aniso)
 cap_P_EIDW <- rmse(cap_P_EIDW)
 plot(cap_P_EIDW)
 
+
+
+
+
+
+
+data_aniso_test <- removeOutlier(data=dados, column_names="P")
+new_data_aniso_test <- highres.grid
+p_aniso_test <- checkAnisotropy(data_aniso_test, P~1)
+p_aniso_test <- p_aniso_test$direction
+#data_aniso_test@coords <- rotateAnisotropicData(data_aniso_test, p_aniso_test)@coords
+new_data_aniso_test$result <- eidw(data=data_aniso_test, newdata=new_data_aniso_test, formula= P~1, anisotropy=p_aniso_test)
+
+data_aniso_test2 <-removeOutlier(data=dados, column_names="P")
+new_data_aniso_test2 <- highres.grid
+p_aniso_test2 <- c(p_aniso_test$direction, p_aniso_test$ratio)
+# data_aniso_test2@coords <- coords.aniso(data_aniso_test2@coords, p_aniso_test2)
+# colnames(data_aniso_test2@coords) <- c("x", "y")
+# new_data_aniso_test2@coords <- coords.aniso(new_data_aniso_test2@coords, p_aniso_test2)
+# colnames(new_data_aniso_test2@coords) <- c("x", "y")
+new_data_aniso_test2$result <- idw_test(data = data_aniso_test2, newdata=new_data_aniso_test2, formula = P~1, handle_anisotropy = FALSE, handle_assimetry = FALSE, idp = 2, anisotropy=p_aniso_test2)
+# new_data_aniso_test2 <- handleAnisotropy(data=new_data_aniso_test2, formula=P~1, anisotropy=p_aniso_test2, reverse=TRUE)
+# data_aniso_teste2 <- handleAnisotropy(data=data_aniso_test2, formula=P~1, anisotropy=p_aniso_test2, reverse=TRUE)
+
+
+spplot(new_data_aniso_test, zcol = "result", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "teste1"))
+spplot(new_data_aniso_test2, zcol = "result", main = list(font = 1, cex = 1, label = "IDQ"), sub = list(font = 1, cex = 1, label = "teste2"))
+
+teste1_rmse <- rmse(data=data_aniso_test, formula=P~1, funcInterpolation=eidw)
+teste2_rmse <- rmse(data=data_aniso_test2, formula=P~1, funcInterpolation=idw_test)
+
+print(teste1_rmse)
+print(teste2_rmse)
+
+idw_test <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula", handle_anisotropy = FALSE,
+                         handle_assimetry = FALSE, rmse_data = NULL, idp = 2, smooth = 0, n = 10, anisotropy = NULL){
+  #anisotropy <- NULL
+  if(is.null(anisotropy)){
+    if(is.null(rmse_data)){
+      anisotropy <- checkAnisotropy(data, formula)
+      anisotropy <- c(anisotropy$direction, anisotropy$ratio)
+    }
+    else{
+      anisotropy <- checkAnisotropy(rmse_data, formula)
+      anisotropy <- c(anisotropy$direction, anisotropy$ratio)
+    }
+  }
+  
+  data@coords <- coords.aniso(data@coords, anisotropy)
+  colnames(data@coords) <- c("x", "y")
+  newdata@coords <- coords.aniso(newdata@coords, anisotropy)
+  colnames(newdata@coords) <- c("x", "y")
+  
+  attribute <- formulaToVector(formula=formula, side="left")
+  newdata_len <- length(newdata)
+  data_len <- length(data)
+  result <- vector(length=newdata_len)
+  for (j in 1:newdata_len){
+    weight <- 0
+    sum_of_weights <- 0
+    weighted_values_sum <- 0
+    weight_df <- data.frame(weight=numeric(data_len), value=numeric(data_len))
+    for(i in 1:data_len){
+      delta_x = newdata@coords[j,1] - data@coords[i,1]
+      delta_y = newdata@coords[j,2] - data@coords[i,2]
+      weight_df$weight[i] <- sqrt(delta_x^2 + delta_y^2)^idp
+      weight_df$value[i] <- data@data[i, attribute]
+      #sum_of_weights <- sum_of_weights + weight
+      #weighted_values_sum <- weighted_values_sum + weight*data@data[i, attribute]
+    }
+    sorted_df <- weight_df[order(weight_df$weight),]
+    selected_n <- sorted_df[1:n,]
+    sum_of_weights <- sum(1/selected_n$weight)
+    weighted_values_sum <- sum(selected_n$value / selected_n$weight)
+    point <- unname(weighted_values_sum / sum_of_weights)
+    result[j] <- point
+  }
+  newdata$result <- result
+  newdata <- handleAnisotropy(data=newdata, formula=result~1, anisotropy=anisotropy, reverse=TRUE)
+  #data <- handleAnisotropy(data=data, formula=P~1, anisotropy=anisotropy, reverse=TRUE)
+  
+  return(result)
+}
+
+
+
+
+
+cap_P_no_outlier_aniso_KO_test <- ordinaryKriging(cap_P_no_outlier_aniso)
+cap_P_no_outlier_aniso_KO_test <- rmse(cap_P_no_outlier_aniso_KO_test)
+
+plot(cap_P_no_outlier_aniso_KO_test)
+
+cap_P_no_outlier_aniso_KO_test2 <- ordinaryKriging_aniso_test(cap_P_no_outlier_aniso)
+cap_P_no_outlier_aniso_KO_test2 <- rmse(cap_P_no_outlier_aniso_KO_test2)
+
+plot(cap_P_no_outlier_aniso_KO)
+
+
+
+plot(ordinaryKriging(cap_P_no_outlier_aniso$data, cap_P_no_outlier_aniso$newdata, cap_P_no_outlier_aniso$formula))
+plot(ordinaryKriging_aniso_test.default(cap_P_no_outlier_aniso$data, cap_P_no_outlier_aniso$newdata, cap_P_no_outlier_aniso$formula))
+autokrigetest <- autoKrige(formula = cap_P_no_outlier_aniso$formula, input_data = cap_P_no_outlier_aniso$data, new_data = cap_P_no_outlier_aniso$newdata)
+
+
+#ordinary kriging
+ordinaryKriging_aniso_test.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula",
+                                    data_variogram = NULL, handle_anisotropy = TRUE, handle_assimetry = TRUE, rmse_data = NULL, cap_return = FALSE, idp = NULL){
+  #check and remove assimetry
+  if(isTRUE(handle_assimetry)){
+    if(is.null(rmse_data)){
+      normal_distribution <- normalDistribution(data = data, formula = formula)
+      if(isFALSE(normal_distribution)){
+        lambda <- boxCoxLambda(formula = formula, data = data)
+        main_var <- formulaToVector(formula = formula, side = "left")
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = FALSE)
+      }
+    }
+    else{
+      normal_distribution <- normalDistribution(data = rmse_data, formula = formula)
+      if(isFALSE(normal_distribution)){
+        lambda <- boxCoxLambda(formula = formula, data = rmse_data)
+        main_var <- formulaToVector(formula = formula, side = "left")
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = FALSE)
+        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data, lambda = lambda, reverseBoxCox = FALSE)
+      }
+    }
+  }
+  #check and remove anisotropy
+  if(isTRUE(handle_anisotropy)){
+    if(is.null(rmse_data)){
+      anisotropy <- checkAnisotropy(data=data, formula=formula)
+      data_variogram <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
+      data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
+      newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy)
+    }
+    else{
+      anisotropy <- checkAnisotropy(data=rmse_data, formula=formula)
+      data_variogram <- handleAnisotropy(rmse_data, formula, anisotropy = anisotropy)
+      data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
+      newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy)
+    }
+  }
+  else{
+    if(is.null(rmse_data) && is.null(data_variogram)){
+      data_variogram <- data
+    }
+    else if(!is.null(rmse_data) && is.null(data_variogram)){
+      data_variogram <- rmse_data
+    }
+  }
+  
+  #do the kriging with the generated variogram
+  interpolated_data <- autoKrige(formula, data, newdata, data_variogram = data_variogram)
+  
+  # #rotates coordinates back to anisotropic
+  if(isTRUE(handle_anisotropy)){
+    interpolated_data$krige_output <- handleAnisotropy(data = data$krige_output, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+    data <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+    newdata <- handleAnisotropy(data = newdata, formula = formula, anisotropy = anisotropy, reverse = TRUE)
+  }
+  
+  #back-transforms data to assimetry
+  if(isTRUE(handle_assimetry)){
+    if(isFALSE(normal_distribution)){
+      if(is.null(rmse_data)){
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
+      }
+      else{
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
+        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data, lambda = lambda, reverseBoxCox = TRUE)
+      }
+      interpolated_data$krige_output$var1.pred <- boxCoxTransform(formula = formula, data = interpolated_data, lambda = lambda, reverseBoxCox = TRUE)
+    }
+  }
+  
+  
+  if(isTRUE(cap_return) && is.null(rmse_data)){
+    return(interpolated_data)
+  }
+  else{
+    return(interpolated_data$krige_output$var1.pred)
+  }
+}

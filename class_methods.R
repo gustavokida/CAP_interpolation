@@ -11,9 +11,9 @@ removeOutlier.cap <- function(object){
 
 
 
-checkQuantity.cap <- function(object){
+checkQuantity.cap <- function(object, aniso = FALSE){
   column_name <- formulaToVector(object$formula, side = "left")
-  object$point_quantity <- checkQuantity(data = object$data, column_name = column_name)
+  object$point_quantity <- checkQuantity(data = object$data, column_name = column_name, aniso = aniso)
   return(object)
 }
 
@@ -88,17 +88,17 @@ handleAnisotropy.cap <- function(object){
     return(object)
   }
   else{
+    # rotated_coords <- rotateAnisotropicData(object$data, object$anisotropy)
+    # object$data <- rotated_coords
+    rotated_coords <- coords.aniso(object$data@coords, object$anisotropy, reverse = object$reverse_anisotropy)
+    colnames(rotated_coords) <- c("x", "y")
+    object$data@coords <- rotated_coords
+    rotated_newdata_coords <- coords.aniso(object$newdata@coords, object$anisotropy, reverse = object$reverse_anisotropy)
+    colnames(rotated_newdata_coords) <- c("x", "y")
+    object$newdata@coords <- rotated_newdata_coords
     
-    #rotated_coords <- coords.aniso(object$data@coords, object$anisotropy, reverse = object$reverse_anisotropy)
-    rotated_coords <- rotateAnisotropicData(object$data, object$anisotropy)
-    #colnames(rotated_coords) <- c("x", "y")
-    #object$data@coords <- rotated_coords
-    object$data <- rotated_coords
-    #rotated_newdata_coords <- coords.aniso(object$newdata@coords, object$anisotropy, reverse = object$reverse_anisotropy)
-    #colnames(rotated_newdata_coords) <- c("x", "y")
-    #$newdata@coords <- rotated_newdata_coords
     
-    #object$reverse_anisotropy <- !object$reverse_anisotropy
+    object$reverse_anisotropy <- !object$reverse_anisotropy
     
     return(object)
   }

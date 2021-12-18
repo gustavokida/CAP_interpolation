@@ -6,8 +6,9 @@ library(GWmodel)
 
 
 #ordinary kriging
-ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"), formula = "formula",
-                                    data_variogram = NULL, handle_anisotropy = TRUE, handle_assimetry = TRUE, rmse_data = NULL, cap_return = FALSE, idp = NULL){
+ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c("SpatialPointsDataFrame", "SpatialPixelsDataFrame"),
+                                    formula = "formula", data_variogram = NULL, handle_anisotropy = TRUE, handle_assimetry = TRUE,
+                                    rmse_data = NULL, cap_return = FALSE, idp = NULL){
   #check and remove assimetry
   if(isTRUE(handle_assimetry)){
     if(is.null(rmse_data)){
@@ -31,10 +32,12 @@ ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c
   #check and remove anisotropy
   if(isTRUE(handle_anisotropy)){
     if(is.null(rmse_data)){
-      data_variogram <- handleAnisotropy(data, formula)
+      anisotropy <- checkAnisotropy(data=data, formula=formula)
+      data_variogram <- handleAnisotropy(data = data, formula = formula, anisotropy = anisotropy)
     }
     else{
-      data_variogram <- handleAnisotropy(rmse_data, formula)
+      anisotropy <- checkAnisotropy(data=rmse_data, formula=formula)
+      data_variogram <- handleAnisotropy(rmse_data, formula, anisotropy = anisotropy)
     }
   }
   else{
@@ -53,13 +56,19 @@ ordinaryKriging.default <- function(data = "SpatialPointsDataFrame", newdata = c
   if(isTRUE(handle_assimetry)){
     if(isFALSE(normal_distribution)){
       if(is.null(rmse_data)){
-        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data,
+                                                 lambda = lambda, reverseBoxCox = TRUE)
       }
       else{
-        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data, lambda = lambda, reverseBoxCox = TRUE)
-        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data, lambda = lambda, reverseBoxCox = TRUE)
+        data@data[, main_var] <- boxCoxTransform(formula = formula, data = data,
+                                                 lambda = lambda, reverseBoxCox = TRUE)
+        rmse_data@data[, main_var] <- boxCoxTransform(formula = formula, data = rmse_data,
+                                                      lambda = lambda, reverseBoxCox = TRUE)
       }
-      interpolated_data$krige_output$var1.pred <- boxCoxTransform(formula = formula, data = interpolated_data, lambda = lambda, reverseBoxCox = TRUE)
+      interpolated_data$krige_output$var1.pred <- boxCoxTransform(formula = formula,
+                                                                  data = interpolated_data,
+                                                                  lambda = lambda,
+                                                                  reverseBoxCox = TRUE)
     }
   }
   

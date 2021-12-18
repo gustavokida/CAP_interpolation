@@ -9,8 +9,10 @@ cap <- function(object = NULL, formula = NULL, data = NULL, newdata = NULL, cova
   
   if(is.null(object)){
     object <- list(formula = formula, data = data, newdata = newdata, covariate_data = covariate_data,
-                   formula_output = NULL, trend = FALSE, point_quantity = FALSE, handle_assimetry = TRUE, normal_distribution = FALSE, lambda = numeric(0), reverse_boxcox = FALSE,
-                   handle_anisotropy = TRUE, anisotropy = numeric(0), reverse_anisotropy = FALSE, rmse = numeric(0), interpolation_function = NULL, variogram = NULL, idp = 2)
+                   formula_output = NULL, trend = FALSE, point_quantity = FALSE, handle_assimetry = TRUE,
+                   normal_distribution = FALSE, lambda = numeric(0), reverse_boxcox = FALSE,
+                   handle_anisotropy = TRUE, anisotropy = numeric(0), reverse_anisotropy = FALSE,
+                   rmse = numeric(0), interpolation_function = NULL, variogram = NULL, idp = 2)
     class(object) <- "cap"
   }
   else{

@@ -3,13 +3,27 @@
 autoInterpolation.cap <- function(object){
   object <- removeOutlier(object)
   object <- checkQuantity(object)
+  object <- checkAnisotropy(object)
   if(isFALSE(object$point_quantity)){
-    object <- inverseDistanceWeighted(object)
+    if(isFALSE(object$anisotropy)){
+      object <- inverseDistanceWeighted(object)
+    }
+    else{
+      object <- eidw(object)
+    }
   }
   else{
     if(isFALSE(object$trend)){
       if(is.null(object$covariate_data)){
-        object <- ordinaryKriging(object)
+        if(!isFALSE(object$anisotropy)){
+          object <- checkQuantity(object, aniso = TRUE)
+        }
+        if(isFALSE(object$point_quantity)){
+          object <- eidw(object)
+        }
+        else{
+          object <- ordinaryKriging(object)
+        }
       }
       else{
         object <- coKriging(object)
@@ -22,6 +36,38 @@ autoInterpolation.cap <- function(object){
       else{
         object <- regressionKriging(object)
       }
+    }
+  }
+  return(object)
+}
+
+
+autoInterpolation.cap <- function(object){
+  object <- removeOutlier(object)
+  object <- checkQuantity(object)
+  object <- checkAnisotropy(object)
+  if(isFALSE(object$point_quantity)){
+    if(isFALSE(object$anisotropy)){
+      object <- inverseDistanceWeighted(object)
+    }
+    else{
+      object <- eidw(object)
+    }
+  }
+  else{
+    if(isFALSE(object$trend)){
+      if(!isFALSE(object$anisotropy)){
+        object <- checkQuantity(object, aniso = TRUE)
+      }
+      if(isFALSE(object$point_quantity)){
+        object <- eidw(object)
+      }
+      else{
+        object <- ordinaryKriging(object)
+      }
+    }
+    else{
+      object <- universalKriging(object)
     }
   }
   return(object)
@@ -137,23 +183,23 @@ inverseDistanceWeighted.cap <- function(object){
   # }
   
   #check and remove anisotropy
-  # if(isTRUE(object$handle_anisotropy)){
-  #   object <- checkAnisotropy(object = object)
-  #   object <- handleAnisotropy(object = object)
-  #   object$newdata <- handleAnisotropy(data = object$newdata, formula = object$formula, anisotropy = object$anisotropy)
-  # }
+  if(isTRUE(object$handle_anisotropy)){
+    object <- checkAnisotropy(object = object)
+    object <- handleAnisotropy(object = object)
+    #object$newdata <- handleAnisotropy(data = object$newdata, formula = object$formula, anisotropy = object$anisotropy)
+  }
   
-  object <- estimateIdp(object)
+  #object <- estimateIdp(object)
   
   #perform idw interpolation
   object$newdata@data[, output_name] <- inverseDistanceWeighted(data = object$data, newdata = object$newdata, formula = object$formula,
                                                                 handle_anisotropy = FALSE, handle_assimetry = FALSE, idp=object$idp)
   #rotates coordinates back to anisotropic
-  # if(isTRUE(object$handle_anisotropy)){
-  #   object <- handleAnisotropy(object = object)
-  #   object$newdata <- handleAnisotropy(data = object$newdata, formula = object$formula, anisotropy = object$anisotropy, reverse = TRUE)
-  # }
-  # 
+  if(isTRUE(object$handle_anisotropy)){
+    object <- handleAnisotropy(object = object)
+    #object$newdata <- handleAnisotropy(data = object$newdata, formula = object$formula, anisotropy = object$anisotropy, reverse = TRUE)
+  }
+
   # #back-transforms data to assimetry
   # if(isTRUE(object$handle_assimetry)){
   #   if(isFALSE(object$normal_distribution)){
@@ -166,12 +212,13 @@ inverseDistanceWeighted.cap <- function(object){
 }
 
 
+
 eidw.cap <- function(object){
   object$interpolation_function <- eidw
   main_var <- formulaToVector(formula = object$formula, side = "left")
-  output_name <- paste("eidw", main_var, sep = "_")
+  output_name <- paste("EIDW", main_var, sep = "_")
   object$formula_output = expr(!!as.symbol(output_name)~1)
-  
+  object <- checkAnisotropy(object)
   object <- estimateIdp(object)
   
   #Elliptical Inverse distance weighted
